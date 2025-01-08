@@ -1,0 +1,7 @@
+.vscode/
+obj/
+*.o
+*.a
+*.elf
+*.bin
+*.dis
