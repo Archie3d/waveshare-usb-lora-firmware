@@ -1,5 +1,6 @@
 #include "serial.h"
 #include "crc16.h"
+#include "pinout.h"
 
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
@@ -27,8 +28,10 @@ typedef enum {
     RX_STATE_CRC_MSB
 } rx_state_t;
 
-static QueueHandle_t uart_txq;
-static QueueHandle_t uart_rxq;
+static QueueHandle_t uart_txq = NULL;
+static QueueHandle_t uart_rxq = NULL;
+
+static serial_handler_t* handler = NULL;
 
 static void serial_tx_task(void* args __attribute__((unused)))
 {
@@ -36,24 +39,25 @@ static void serial_tx_task(void* args __attribute__((unused)))
 
     for (;;) {
         if (xQueueReceive(uart_txq, &ch, 500) == pdPASS) {
-
             // Wait until ready
             while (!usart_get_flag(USART1, USART_SR_TXE))
                 taskYIELD();
 
             usart_send(USART1, ch);
+            //usart_send_blocking(USART1, ch);
         }
     }
 }
 
 void usart1_isr(void)
 {
-    static uint8_t data = 'A';
+    //BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    uint8_t data = 'A';
 
     if (usart_get_flag(USART1, USART_FLAG_RXNE) != 0) {
         data = usart_recv(USART1);
 
-        xQueueSend(uart_rxq, &data, portMAX_DELAY);
+        xQueueSendFromISR(uart_rxq, &data, NULL);
     }
 
 #if 0
@@ -83,15 +87,20 @@ static void serial_rx_task(void* args __attribute__((unused)))
     uint16_t payload_bytes_received;
     uint8_t ch;
 
+    long start_time = xTaskGetTickCount();
+
     for (;;) {
         if (xQueueReceive(uart_rxq, &ch, 500) == pdPASS) {
 
-            // @todo Check for timeout and reset state to RX_STATE_START
-            //       if it took too long to receive a complete message.
+            gpio_toggle(LED_TXD_PORT, LED_TXD_PIN);
 
-            if (state != RX_STATE_START && state != RX_STATE_CRC_LSB && state != RX_STATE_CRC_MSB) {
-                // Exclude CRC calculation on start byte and final CRC field.
-                rolling_crc = crc16(rolling_crc, &ch, 1);
+            // Check for timeout and reset state to RX_STATE_START
+            // if it took too long to receive a complete message.
+            const long current_time = xTaskGetTickCount();
+
+            if (current_time - start_time > pdMS_TO_TICKS(SERIAL_TIMEOUT_MS)) {
+                // Message timeout, reset the state
+                state = RX_STATE_START;
             }
 
             if (state != RX_STATE_START) {
@@ -113,13 +122,19 @@ static void serial_rx_task(void* args __attribute__((unused)))
                 escape_sequence_detected = false;
             }
 
+            if (state != RX_STATE_START && state != RX_STATE_CRC_LSB && state != RX_STATE_CRC_MSB) {
+                // Exclude CRC calculation on start byte and final CRC field.
+                rolling_crc = crc16(rolling_crc, &ch, 1);
+            }
+
             /* Handle message receive state machine */
             switch(state) {
             case RX_STATE_START:
                 /* Waiting for the message start byte */
                 if (ch == MESSAGE_START) {
                     state = RX_STATE_TYPE;
-                    rolling_crc = 0;    // Reset CRC calculation
+                    start_time = current_time;  // Reset start time (for timeout calculation)
+                    rolling_crc = 0;            // Reset CRC calculation
                 }
                 break;
             case RX_STATE_TYPE:
@@ -154,6 +169,9 @@ static void serial_rx_task(void* args __attribute__((unused)))
 
                 if (msg_crc == rolling_crc) {
                     // Message is correct
+                    if (handler != NULL && handler->message_received != NULL) {
+                        handler->message_received(msg_type, msg_payload_buffer, (size_t)msg_payload_length);
+                    }
                 } else {
                     // Message CRC error
                 }
@@ -166,7 +184,7 @@ static void serial_rx_task(void* args __attribute__((unused)))
     }
 }
 
-void serial_init()
+void serial_init(serial_handler_t* h)
 {
     rcc_periph_clock_enable(RCC_USART1);
     gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO_USART1_TX);
@@ -180,19 +198,116 @@ void serial_init()
 
     // Enable UART RX interrupt
     usart_enable_rx_interrupt(USART1);
-
+    nvic_set_priority(NVIC_USART1_IRQ, SERIAL_RX_IRQ_PRIORITY);
     nvic_enable_irq(NVIC_USART1_IRQ);
 
 	usart_enable(USART1);
 
     uart_txq = xQueueCreate(SERIAL_TXQ_SIZE, sizeof(uint8_t));
+    uart_rxq = xQueueCreate(SERIAL_RXQ_SIZE, sizeof(uint8_t));
 
     xTaskCreate(serial_tx_task, "UART_TX", 100, NULL, configMAX_PRIORITIES - 1, NULL);
+    xTaskCreate(serial_rx_task, "UART_RX", 100, NULL, configMAX_PRIORITIES - 1, NULL);
+
+    handler = h;
+}
+
+void serial_send_message(uint8_t type, const uint8_t* payload, size_t payload_size)
+{
+    uint16_t crc = 0;
+    uint8_t data;
+
+    serial_putc(MESSAGE_START);
+    serial_putc_escaped(type);
+    crc = crc16(crc, &type, 1);
+
+    data = (uint8_t)(payload_size & 0xFF);
+    serial_putc_escaped(data);
+    crc = crc16(crc, &data, 1);
+
+    data = (uint8_t)((payload_size >> 8) & 0xFF);
+    serial_putc_escaped(data);
+    crc = crc16(crc, &data, 1);
+
+    for (size_t i = 0; i < payload_size; i++) {
+        serial_putc_escaped(payload[i]);
+    }
+
+    crc = crc16(crc, payload, payload_size);
+
+    data = (uint8_t)(crc & 0xFF);
+    serial_putc_escaped(data);
+
+    data = (uint8_t)((crc >> 8) & 0xFF);
+    serial_putc_escaped(data);
+}
+
+void serial_putc(const uint8_t ch)
+{
+    xQueueSend(uart_txq, &ch, portMAX_DELAY);
+}
+
+void serial_putc_escaped(const uint8_t ch)
+{
+    if (ch == MESSAGE_START) {
+        serial_putc(MESSAGE_ESCAPE);
+        serial_putc(MESSAGE_ESCAPE_START);
+    } else if (ch == MESSAGE_ESCAPE) {
+        serial_putc(MESSAGE_ESCAPE);
+        serial_putc(MESSAGE_ESCAPE_ESCAPE);
+    } else {
+        serial_putc(ch);
+    }
 }
 
 void serial_send(const uint8_t* data, size_t size)
 {
     for (size_t i = 0; i < size; i++) {
         xQueueSend(uart_txq, &data[i], portMAX_DELAY);
+    }
+}
+
+
+void debug_puts(const char *str) {
+    while (*str) {
+        char ch = *str++;
+        usart_send_blocking(USART1, ch);
+
+        if (ch == '\n')
+            usart_send_blocking(USART1, '\r');
+    }
+}
+
+void debug_putc(char ch)
+{
+    usart_send_blocking(USART1, ch);
+}
+
+void debug_puti(int i) {
+    char buf[16];
+    int pos = 0;
+
+    if (i < 0) {
+        usart_send_blocking(USART1, '-');
+        i = -i;
+    }
+
+    do {
+        buf[pos++] = '0' + (i % 10);
+        i /= 10;
+    } while (i);
+
+    while (pos > 0) {
+        usart_send_blocking(USART1, buf[--pos]);
+    }
+}
+
+void debug_putx(uint32_t x) {
+    const static char hexChars[] = "0123456789ABCDEF";
+
+    for (int i = 7; i >= 0; i--) {
+        const uint8_t nibble = (x >> (i * 4)) & 0x0F;
+
+        usart_send_blocking(USART1, hexChars[nibble]);
     }
 }

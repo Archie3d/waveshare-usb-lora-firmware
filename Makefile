@@ -8,9 +8,13 @@ OBJCOPY		:= $(PREFIX)-objcopy
 OBJDUMP		:= $(PREFIX)-objdump
 MKDIR_P		:= mkdir -p
 
-CFLAGS := -I. -Isrc -Isx126x -Irtos -Ilibopencm3/include -nostdlib -mthumb -mcpu=cortex-m3 -O2 -DSTM32F1
+ARCH_FLAGS = -mthumb -mcpu=cortex-m3 -msoft-float -mfix-cortex-m3-ldrd
+CFLAGS = -I. -Isrc -Isx126x -Irtos -Ilibopencm3/include -nostdlib $(ARCH_FLAGS) -Os -DSTM32F1
+CFLAGS += -fno-common -ffunction-sections -fdata-sections
+
 
 LDSCRIPT = gd32f103.ld
+
 
 OUT_DIR = obj
 
@@ -39,11 +43,12 @@ vpath %.c src/ rtos/ sx126x/
 all: $(BINARY)
 
 $(BINARY): $(FIRMWARE)
+	@echo [BN]	$@
 	$(Q)$(OBJCOPY) -O binary $< $@
 
 $(FIRMWARE): $(OUT_DIR) libopencm3 $(LIBFREERTOS) $(LIBSX126X) $(OBJS)
 	@echo [CC]	$@
-	$(Q)$(CC) -o $@ $(OBJS) -T gd32f103.ld -L. -Llibopencm3/lib --specs=nano.specs --specs=nosys.specs -lsx126x -lfreertos -lopencm3_stm32f1 -nostartfiles
+	$(Q)$(CC) -o $@ $(OBJS) -T gd32f103.ld -L. -Llibopencm3/lib --specs=nosys.specs -nostartfiles -lc -lgcc -lnosys -lsx126x -lfreertos -lopencm3_stm32f1
 
 libopencm3: libopencm3/lib/libopencm3_stm32f1.a
 

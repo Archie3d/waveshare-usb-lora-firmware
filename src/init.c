@@ -9,9 +9,12 @@
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/exti.h>
 #include <libopencm3/cm3/nvic.h>
+#include "libopencm3/cm3/scb.h"
 
-void global_init()
+void global_init(serial_handler_t* serial_handler)
 {
+    SCB_CCR &= ~SCB_CCR_UNALIGN_TRP; // Disable unaligned access traps
+
     // Initialize system clock, XTAL 8MHz PLL to 72MHz
     rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
 
@@ -33,7 +36,7 @@ void global_init()
     gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LORA_RF_SW_PIN);
 
     // Initialize USART
-    serial_init();
+    serial_init(serial_handler);
 
     // Initialize SX126X interface
     radio_init();
