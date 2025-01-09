@@ -44,33 +44,22 @@ static void serial_tx_task(void* args __attribute__((unused)))
                 taskYIELD();
 
             usart_send(USART1, ch);
-            //usart_send_blocking(USART1, ch);
         }
     }
 }
 
 void usart1_isr(void)
 {
-    //BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    uint8_t data = 'A';
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    uint8_t data;
 
     if (usart_get_flag(USART1, USART_FLAG_RXNE) != 0) {
         data = usart_recv(USART1);
 
-        xQueueSendFromISR(uart_rxq, &data, NULL);
+        xQueueSendFromISR(uart_rxq, &data, &xHigherPriorityTaskWoken);
     }
 
-#if 0
-    /* Check if we were called because of RXNE. */
-	if (((USART_CR1(USART1) & USART_CR1_RXNEIE) != 0) &&
-	    ((USART_SR(USART1) & USART_SR_RXNE) != 0)) {
-
-		/* Retrieve the data from the peripheral. */
-		data = usart_recv(USART1);
-
-        xQueueSend(uart_rxq, &data, portMAX_DELAY);
-	}
-#endif
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 static void serial_rx_task(void* args __attribute__((unused)))
@@ -91,9 +80,6 @@ static void serial_rx_task(void* args __attribute__((unused)))
 
     for (;;) {
         if (xQueueReceive(uart_rxq, &ch, 500) == pdPASS) {
-
-            gpio_toggle(LED_TXD_PORT, LED_TXD_PIN);
-
             // Check for timeout and reset state to RX_STATE_START
             // if it took too long to receive a complete message.
             const long current_time = xTaskGetTickCount();

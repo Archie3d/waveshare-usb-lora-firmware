@@ -48,20 +48,35 @@ static const char* message = "TEST MESSAGE";
 
 static void dummy(void* args __attribute__((unused))) {
     for (;;) {
-        gpio_toggle(LED_RXD_PORT, LED_RXD_PIN);
-        //serial_putc('C');
-        serial_send_message('[', message, 12);
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(10000));
+        radio_transmit(message, 12);
     }
 }
 
 static void serial_message_received(uint8_t type, const uint8_t* payload, size_t payload_size)
 {
+    radio_transmit(message, 12);
 }
 
 serial_handler_t serial_handler = {
     .message_received = serial_message_received
 };
+
+static void lora_packet_received(int8_t rssi, int8_t snr, const uint8_t* payload, size_t payload_size)
+{
+    DBG("Packet of ");
+    DBG_I((int)payload_size);
+    DBG(" bytes received. RSSI: ");
+    DBG_I(rssi);
+    DBG(" dBm, SNR: ");
+    DBG_I(snr);
+    DBG(" dB\n");
+}
+
+radio_handler_t radio_handler = {
+    .packet_received = lora_packet_received
+};
+
 
 //const static char* msg = "TEST MESSAGE";
 
@@ -69,7 +84,7 @@ uint8_t buff1[8];
 
 int main(void)
 {
-    global_init(&serial_handler);
+    global_init(&serial_handler, &radio_handler);
 
     xTaskCreate(dummy, "Dummy", 100, NULL, configMAX_PRIORITIES - 2, NULL);
 

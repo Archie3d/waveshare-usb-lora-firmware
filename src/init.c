@@ -11,7 +11,7 @@
 #include <libopencm3/cm3/nvic.h>
 #include "libopencm3/cm3/scb.h"
 
-void global_init(serial_handler_t* serial_handler)
+void global_init(serial_handler_t* serial_handler, radio_handler_t* radio_handler)
 {
     SCB_CCR &= ~SCB_CCR_UNALIGN_TRP; // Disable unaligned access traps
 
@@ -39,5 +39,5 @@ void global_init(serial_handler_t* serial_handler)
     serial_init(serial_handler);
 
     // Initialize SX126X interface
-    radio_init();
+    radio_init(radio_handler);
 }

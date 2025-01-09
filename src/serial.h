@@ -6,7 +6,7 @@
 
 #define SERIAL_BAUD         115200
 #define SERIAL_DATA_BITS    8
-#define SERIAL_RX_IRQ_PRIORITY 0xC0 // Must >= max SysCall priority (0xB0 if FreeRTOSConfig.h)
+#define SERIAL_RX_IRQ_PRIORITY 0xC0 // Must >= max SysCall priority (0xB0 in FreeRTOSConfig.h)
 
 #define SERIAL_TXQ_SIZE     256
 #define SERIAL_RXQ_SIZE     256
