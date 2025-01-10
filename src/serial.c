@@ -127,6 +127,8 @@ static void serial_rx_task(void* args __attribute__((unused)))
                 /* Waiting for the message type */
                 msg_type = ch;
                 state = RX_STATE_LENGTH_LSB;
+                DBG_I(msg_type);
+                DBG("\n");
                 break;
             case RX_STATE_LENGTH_LSB:
                 msg_payload_length = (uint16_t)ch;
@@ -134,7 +136,11 @@ static void serial_rx_task(void* args __attribute__((unused)))
                 break;
             case RX_STATE_LENGTH_MSB:
                 msg_payload_length = msg_payload_length | (((uint16_t)ch) << 8);
-                state = RX_STATE_PAYLOAD;
+                if (msg_payload_length > 0)
+                    state = RX_STATE_PAYLOAD;
+                else
+                    state = RX_STATE_CRC_LSB;
+
                 payload_bytes_received = 0;
                 break;
             case RX_STATE_PAYLOAD:
@@ -160,6 +166,9 @@ static void serial_rx_task(void* args __attribute__((unused)))
                     }
                 } else {
                     // Message CRC error
+                    if (handler != NULL && handler->message_crc_error != NULL) {
+                        handler->message_crc_error();
+                    }
                 }
                 state = RX_STATE_START;
                 break;
@@ -215,11 +224,12 @@ void serial_send_message(uint8_t type, const uint8_t* payload, size_t payload_si
     serial_putc_escaped(data);
     crc = crc16(crc, &data, 1);
 
-    for (size_t i = 0; i < payload_size; i++) {
-        serial_putc_escaped(payload[i]);
-    }
+    if (payload != NULL && payload_size > 0) {
+        for (size_t i = 0; i < payload_size; i++)
+            serial_putc_escaped(payload[i]);
 
-    crc = crc16(crc, payload, payload_size);
+        crc = crc16(crc, payload, payload_size);
+    }
 
     data = (uint8_t)(crc & 0xFF);
     serial_putc_escaped(data);

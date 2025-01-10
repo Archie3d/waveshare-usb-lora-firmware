@@ -15,6 +15,7 @@
 
 typedef struct {
     void (*message_received)(uint8_t type, const uint8_t* payload, size_t payload_size);
+    void (*message_crc_error)(void);
 } serial_handler_t;
 
 void serial_init(serial_handler_t* handler);

@@ -5,6 +5,7 @@
 
 #include "init.h"
 #include "pinout.h"
+#include "message.h"
 
 void *dbg_memcpy(void *dest, const void *src, size_t n) {
     uint8_t *d = dest;
@@ -15,10 +16,9 @@ void *dbg_memcpy(void *dest, const void *src, size_t n) {
     return dest;
 }
 
-void vApplicationStackOverflowHook(TaskHandle_t xTask, char* pcTaskName)
+static void error_blink()
 {
-    (void)xTask;
-    (void)pcTaskName;
+    taskDISABLE_INTERRUPTS();
 
     gpio_set(LED_RXD_PORT, LED_RXD_PIN);
     gpio_set(LED_TXD_PORT, LED_TXD_PIN);
@@ -33,6 +33,14 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char* pcTaskName)
     }
 }
 
+void vApplicationStackOverflowHook(TaskHandle_t xTask, char* pcTaskName)
+{
+    (void)xTask;
+    (void)pcTaskName;
+
+    error_blink();
+}
+
 void vAssertCalled(const char *file, int line) {
     debug_puts("Assert failed in file ");
     debug_puts(file);
@@ -40,30 +48,28 @@ void vAssertCalled(const char *file, int line) {
     debug_puti(line);
     debug_puts("\n");
 
-    taskDISABLE_INTERRUPTS();
-    for( ;; );
-}
-
-static const char* message = "TEST MESSAGE";
-
-static void dummy(void* args __attribute__((unused))) {
-    for (;;) {
-        vTaskDelay(pdMS_TO_TICKS(10000));
-        radio_transmit(message, 12);
-    }
+    error_blink();
 }
 
 static void serial_message_received(uint8_t type, const uint8_t* payload, size_t payload_size)
 {
-    radio_transmit(message, 12);
+    process_raw_message(type, payload, payload_size);
+}
+
+static void serial_message_crc_error()
+{
+    send_error();
 }
 
 serial_handler_t serial_handler = {
-    .message_received = serial_message_received
+    .message_received = serial_message_received,
+    .message_crc_error = serial_message_crc_error,
 };
 
 static void lora_packet_received(int8_t rssi, int8_t snr, const uint8_t* payload, size_t payload_size)
 {
+    serial_send_message(MSG_RECEIVED, payload, payload_size);
+    /*
     DBG("Packet of ");
     DBG_I((int)payload_size);
     DBG(" bytes received. RSSI: ");
@@ -71,22 +77,23 @@ static void lora_packet_received(int8_t rssi, int8_t snr, const uint8_t* payload
     DBG(" dBm, SNR: ");
     DBG_I(snr);
     DBG(" dB\n");
+    */
+}
+
+static void lora_packet_transmitted()
+{
+    serial_send_message(MSG_TRANSMITTED, NULL, 0);
 }
 
 radio_handler_t radio_handler = {
-    .packet_received = lora_packet_received
+    .packet_received = lora_packet_received,
+    .packet_transmitted = lora_packet_transmitted
 };
 
-
-//const static char* msg = "TEST MESSAGE";
-
-uint8_t buff1[8];
 
 int main(void)
 {
     global_init(&serial_handler, &radio_handler);
-
-    xTaskCreate(dummy, "Dummy", 100, NULL, configMAX_PRIORITIES - 2, NULL);
 
     vTaskStartScheduler();
 

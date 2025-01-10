@@ -17,7 +17,8 @@ typedef enum {
     NOTIF_RX_DONE = 0x0001,
     NOTIF_TX_DONE = 0x0002,
     NOTIF_TIMEOUT = 0x0004,
-    NOTIF_TRANSMIT = 0x0100
+    NOTIF_TRANSMIT = 0x0100,
+    NOTIF_SET_LORA_PARAMS = 0x0200,
 } isr_notification_t;
 
 // Expected output power = 11dB
@@ -28,7 +29,7 @@ static const sx126x_pa_cfg_params_t pa_pwr_cfg = {
     .pa_lut = 0x1,
 };
 
-static const sx126x_mod_params_lora_t lora_mod_params = {
+static sx126x_mod_params_lora_t lora_mod_params = {
     .sf = SX126X_LORA_SF11,     // LORA_SPREADING_FACTOR
     .bw = SX126X_LORA_BW_250,   // LORA_BANDWIDTH       250 for Long fast
     .cr = SX126X_LORA_CR_4_8,   // LORA_CODING_RATE
@@ -140,14 +141,16 @@ static void radio_isr_task(void* args __attribute__((unused)))
     sx126x_set_rx_with_timeout_in_rtc_step(NULL, SX126X_RX_CONTINUOUS);
 
     for (;;) {
-        xTaskNotifyWait(0,      // bits to clear on entry
-                        0xFFFF, // bits to clear on exit
-                        &ulNotifiedValue, // Notified value pass out in
-                        portMAX_DELAY);
-
-        DBG("xTaskNotifyWait ");
-        DBG_X(ulNotifiedValue);
-        DBG("\n");
+        if (xTaskNotifyWait(0,      // bits to clear on entry
+                            0xFFFF, // bits to clear on exit
+                            &ulNotifiedValue, // Notified value pass out in
+                            1) == pdFALSE)
+        {
+            // Idle, measure RSSI
+            uint16_t rssi;
+            sx126x_get_rssi_inst(NULL, &rssi);
+            continue;
+        }
 
         if (ulNotifiedValue & NOTIF_RX_DONE) {
             sx126x_rx_buffer_status_t rx_buffer_status;
@@ -176,8 +179,6 @@ static void radio_isr_task(void* args __attribute__((unused)))
             transmitting = false;
             gpio_set(LED_RXD_PORT, LED_RXD_PIN);
             gpio_set(LED_TXD_PORT, LED_TXD_PIN);
-
-            DBG("timeout\n");
         }
 
         if (ulNotifiedValue & NOTIF_TX_DONE) {
@@ -196,7 +197,17 @@ static void radio_isr_task(void* args __attribute__((unused)))
             gpio_clear(LED_TXD_PORT, LED_TXD_PIN);
 
             gpio_clear(LORA_RF_SW_PORT, LORA_RF_SW_PIN);
-            sx126x_set_tx(NULL, 5000);
+            sx126x_set_tx(NULL, 0);
+
+            if (handler != NULL && handler->packet_transmitted != NULL) {
+                handler->packet_transmitted();
+            }
+        }
+
+        if (ulNotifiedValue & NOTIF_SET_LORA_PARAMS) {
+            sx126x_set_standby(NULL, SX126X_STANDBY_CFG_RC);
+            sx126x_set_lora_mod_params(NULL, &lora_mod_params);
+            sx126x_set_rx_with_timeout_in_rtc_step(NULL, SX126X_RX_CONTINUOUS);
         }
 
     }
@@ -243,9 +254,23 @@ void radio_init(radio_handler_t* h)
     xTaskCreate(radio_isr_task, "RADIO_ISR", 100, NULL, configMAX_PRIORITIES - 1, &xRadioIsrTask);
 }
 
-void radio_configure()
+void radio_set_lora_params(uint8_t sf, uint8_t bw, uint8_t cr)
+{
+    lora_mod_params.sf = sf;
+    lora_mod_params.bw = bw;
+    lora_mod_params.cr = cr;
+
+    xTaskNotify(xRadioIsrTask, NOTIF_SET_LORA_PARAMS, eSetBits);
+}
+
+void radio_set_rx_params(uint8_t sf, uint8_t bw, uint8_t cr)
 {
 
+}
+
+bool radio_is_transmitting()
+{
+    return transmitting;
 }
 
 void radio_transmit(const uint8_t* payload, size_t payload_size)

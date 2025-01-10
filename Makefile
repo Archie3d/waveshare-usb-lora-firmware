@@ -35,7 +35,7 @@ SX126X_OBJS := $(patsubst %.o, obj/%.o, $(SX126X_OBJS))
 FIRMWARE = fimrware.elf
 BINARY = firmware.bin
 
-OBJS = main.o init.o radio.o serial.o crc16.o
+OBJS = main.o init.o radio.o serial.o message.o crc16.o
 OBJS := $(patsubst %.o, obj/%.o, $(OBJS))
 
 vpath %.c src/ rtos/ sx126x/
