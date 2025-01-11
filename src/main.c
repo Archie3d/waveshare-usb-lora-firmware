@@ -42,55 +42,54 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char* pcTaskName)
 }
 
 void vAssertCalled(const char *file, int line) {
-    debug_puts("Assert failed in file ");
-    debug_puts(file);
-    debug_puts(", line ");
-    debug_puti(line);
-    debug_puts("\n");
+    DBG("Assert failed in file ");
+    DBG(file);
+    DBG(", line ");
+    DBG_I(line);
+    DBG("\n");
 
     error_blink();
 }
 
 static void serial_message_received(uint8_t type, const uint8_t* payload, size_t payload_size)
 {
-    process_raw_message(type, payload, payload_size);
-}
-
-static void serial_message_crc_error()
-{
-    send_error();
+    message_process_from_serial(type, payload, payload_size);
 }
 
 serial_handler_t serial_handler = {
     .message_received = serial_message_received,
-    .message_crc_error = serial_message_crc_error,
 };
 
-static void lora_packet_received(int8_t rssi, int8_t snr, const uint8_t* payload, size_t payload_size)
+static void tx_rx_timeout()
 {
-    serial_send_message(MSG_RECEIVED, payload, payload_size);
-    /*
-    DBG("Packet of ");
-    DBG_I((int)payload_size);
-    DBG(" bytes received. RSSI: ");
-    DBG_I(rssi);
-    DBG(" dBm, SNR: ");
-    DBG_I(snr);
-    DBG(" dB\n");
-    */
+    message_timeout();
 }
 
-static void lora_packet_transmitted()
+static void lora_packet_received(int8_t rssi, int8_t snr, int8_t signal_rssi, const uint8_t* payload, size_t payload_size)
 {
-    serial_send_message(MSG_TRANSMITTED, NULL, 0);
+    message_packet_received(rssi, snr, signal_rssi, payload, payload_size);
+}
+
+static void lora_packet_transmitted(uint32_t time_on_air)
+{
+    message_packet_transmitted(time_on_air);
+}
+
+static void reported_rssi(int16_t rssi)
+{
+    message_rssi(rssi);
 }
 
 radio_handler_t radio_handler = {
+    .timeout = tx_rx_timeout,
     .packet_received = lora_packet_received,
-    .packet_transmitted = lora_packet_transmitted
+    .packet_transmitted = lora_packet_transmitted,
+    .reported_rssi = reported_rssi,
 };
 
-
+/**
+ * Main entry point.
+ */
 int main(void)
 {
     global_init(&serial_handler, &radio_handler);

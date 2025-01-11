@@ -166,9 +166,6 @@ static void serial_rx_task(void* args __attribute__((unused)))
                     }
                 } else {
                     // Message CRC error
-                    if (handler != NULL && handler->message_crc_error != NULL) {
-                        handler->message_crc_error();
-                    }
                 }
                 state = RX_STATE_START;
                 break;
@@ -237,6 +234,49 @@ void serial_send_message(uint8_t type, const uint8_t* payload, size_t payload_si
     data = (uint8_t)((crc >> 8) & 0xFF);
     serial_putc_escaped(data);
 }
+
+void serial_send_message2(uint8_t type, const uint8_t* chunk1, size_t chunk1_size,
+                                        const uint8_t* chunk2, size_t chunk2_size)
+{
+    uint16_t crc = 0;
+    uint8_t data;
+
+    const uint16_t total_size = (chunk1 != NULL ? chunk1_size : 0) +
+                                (chunk2 != NULL ? chunk2_size : 0);
+
+    serial_putc(MESSAGE_START);
+    serial_putc_escaped(type);
+    crc = crc16(crc, &type, 1);
+
+    data = (uint8_t)(total_size & 0xFF);
+    serial_putc_escaped(data);
+    crc = crc16(crc, &data, 1);
+
+    data = (uint8_t)((total_size >> 8) & 0xFF);
+    serial_putc_escaped(data);
+    crc = crc16(crc, &data, 1);
+
+    if (chunk1 != NULL & chunk1_size > 0) {
+        for (size_t i = 0; i < chunk1_size; i++)
+            serial_putc_escaped(chunk1[i]);
+
+        crc = crc16(crc, chunk1, chunk1_size);
+    }
+
+    if (chunk2 != NULL & chunk2_size > 0) {
+        for (size_t i = 0; i < chunk2_size; i++)
+            serial_putc_escaped(chunk2[i]);
+
+        crc = crc16(crc, chunk2, chunk2_size);
+    }
+
+    data = (uint8_t)(crc & 0xFF);
+    serial_putc_escaped(data);
+
+    data = (uint8_t)((crc >> 8) & 0xFF);
+    serial_putc_escaped(data);
+}
+
 
 void serial_putc(const uint8_t ch)
 {

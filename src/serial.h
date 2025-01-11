@@ -15,12 +15,13 @@
 
 typedef struct {
     void (*message_received)(uint8_t type, const uint8_t* payload, size_t payload_size);
-    void (*message_crc_error)(void);
 } serial_handler_t;
 
 void serial_init(serial_handler_t* handler);
 
 void serial_send_message(uint8_t type, const uint8_t* payload, size_t payload_size);
+void serial_send_message2(uint8_t type, const uint8_t* chunk1, size_t chunk1_size,
+                                        const uint8_t* chunk2, size_t chunk2_size);
 
 void serial_putc(const uint8_t ch);
 void serial_putc_escaped(const uint8_t ch);
