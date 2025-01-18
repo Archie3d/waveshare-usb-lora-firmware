@@ -5,6 +5,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+/**
+ * By default the LoRa sync word will be initialized to this value.
+ * This can be changed via the control interface.
+ */
 #define MESHTASTIC_SYNCWORD 0x2B
 
 #define LORA_IRQ_PRIORITY   0xBF
@@ -63,6 +67,7 @@ uint8_t radio_get_fallback_mode();
 void radio_set_fallback_mode(uint8_t fbm);
 
 int16_t radio_get_continuous_rssi();
+
 typedef struct {
     uint32_t timeout;
     uint8_t report_rssi;

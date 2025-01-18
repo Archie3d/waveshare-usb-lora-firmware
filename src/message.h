@@ -31,7 +31,7 @@ typedef enum {
     MSG_TX            = 0x8A,
     MSG_STANDBY       = 0x8B,
 
-    // Unsolicited messages
+    // Unsolicited messages (from device)
     MSG_TIMEOUT            = 0x90,
     MSG_PACKET_RECEIVED    = 0x91,
     MSG_PACKET_TRANSMITTED = 0x92,
@@ -40,6 +40,10 @@ typedef enum {
 } message_type_t;
 
 void message_process_from_serial(uint8_t type, const uint8_t* data, size_t size);
+
+/*
+    Unsolicited messages
+*/
 
 void message_timeout();
 void message_packet_received(int8_t rssi, int8_t snr, int8_t signal_rssi, const uint8_t* data, size_t size);

@@ -65,7 +65,7 @@ class Client:
 
     def send_message(self, type, data):
         assert type >= 0 and type < 256
-        assert len(x) <= 0xFFFF
+        assert len(data) <= 0xFFFF
 
         buffer = type.to_bytes(1, 'little') + len(data).to_bytes(2, 'little') + data
         crc = crc16(0, buffer)
@@ -79,7 +79,7 @@ class Client:
 
         while not start_detected:
             b = self.serial.read(1)
-            if b == START:
+            if b[0] == START:
                 start_detected = True
 
         # Message type
@@ -88,7 +88,7 @@ class Client:
         # Payload length
         length_lsb = self._recv_byte()[0]
         length_msb = self._recv_byte()[0]
-        length = length_msb << 8 + length_lsb
+        length = (int(length_msb) << 8) + int(length_lsb)
 
         # Payload
         received = 0;
@@ -97,11 +97,12 @@ class Client:
         while received < length:
             b = self._recv_byte()
             payload = payload + b
+            received += 1
 
         # CRC
         crc_lsb = self._recv_byte()[0]
         crc_msb = self._recv_byte()[0]
-        crc = crc_msb << 8 + crc_lsb
+        crc = (int(crc_msb) << 8) + int(crc_lsb)
 
         # Check CRC
         buffer = type + length.to_bytes(2, 'little') + payload
@@ -126,18 +127,10 @@ class Client:
 
 
 if __name__ == "__main__":
-    x = b'\x01\xaa\x03\x04'
 
     client = Client('COM4')
 
-    client.send_message(0x01, b'\xaa')
+    client.send_message(0x01, b'')
+    type, resp = client.recv_message()
 
-    while True:
-        line = client.serial.readline()
-        print(line)
-
-    #client.send_message(0x01, b'')
-    #type, payload = client.recv_message()
-    #print(f"Response {type}")
-    #print_bytes(payload)
-
+    print(f"Received response of type {type:02X}, payload: {resp}")
