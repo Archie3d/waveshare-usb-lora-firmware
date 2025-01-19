@@ -1,4 +1,5 @@
 .vscode/
+__pycache__/
 obj/
 *.o
 *.a
