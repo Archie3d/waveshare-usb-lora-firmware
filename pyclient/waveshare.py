@@ -1,3 +1,6 @@
+"""
+Communication client used to unit test the serial API.
+"""
 import serial
 
 def crc16(crc0:int, data:bytes):
@@ -190,6 +193,7 @@ LORA_CR_4_6 = 0x02
 LORA_CR_4_7 = 0x03
 LORA_CR_4_8 = 0x04
 
+# Power ramp
 POWER_RAMP_10 = 0x00
 POWER_RAMP_20 = 0x01
 POWER_RAMP_40 = 0x02
@@ -199,16 +203,21 @@ POWER_RAMP_800 = 0x05
 POWER_RAMP_1700 = 0x06
 POWER_RAMP_3400 = 0x07
 
+# Fallback mode
 FALLBACK_STANDBY_RC = 0x20
 FALLBACK_STANDBY_XOSC = 0x30
 FALLBACK_STANDBY_XOSC_RX = 0x31
 FALLBACK_FS = 0x40
 
+# Standby mode
 STANDBY_RC = 0x00
 STANDBY_XOSC = 0x01
 
 
 class ApiClient:
+    """
+    API client that exposes the high level controls.
+    """
 
     def __init__(self, port):
         self.serial = SerialClient(port)
@@ -241,6 +250,9 @@ class ApiClient:
 
 
     def wait_for_response(self, msg_type):
+        '''
+        Wait for the right response while also receiving unsolicited messages,
+        '''
         type = 0x00
 
         while type != msg_type:

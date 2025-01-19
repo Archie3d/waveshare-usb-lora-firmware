@@ -1,8 +1,9 @@
-# waveshare-usb-lora-firmware
-Custom firmware to send and receive Meshtastic messages using Waveshare USB-to-LoRa module.
+# Waveshare usb-lora custom firmware
+Custom firmware to send and receive LoRa messages (particularly Meshtastic) using [Waveshare USB-to-LoRa module](https://github.com/Archie3d/waveshare-usb-lora).
 
 ## Communication interface
-Serial port must be configured as following:
+Once programmed, the module can be accessed via serial interface via the API described below.
+The serial port must be configured as following:
 | Parameter       | Value       |
 |:----------------|:------------|
 | Transfer rate   | 115200 baud |
@@ -13,7 +14,7 @@ Serial port must be configured as following:
 
 ## API
 
-Binary communication protocol is used to talk to the device. Messages format as the same for both device to host and host to device communication.
+Binary communication protocol is used to talk to the device. Format of the messages is the same for both device to host and host to device communication.
 
 All numbers are encoded as **little endian**, meaning that the least significant byte (LSB) is transmitted firts, and the most significant byte (MSB) is transmitted last.
 
@@ -29,9 +30,9 @@ A message has the following format:
 
 ### Escaping
 
-`0xAA` value is used to detect a message start in a data stream. This means that this value cannot be used anywhere else. For this reason all the fields of the message except the start byte must be escaped.
+`0xAA` value is used to detect a message start in a data stream. This means that this value cannot be used anywhere else. For this reason all the fields of the message except the start byte are escaped.
 
-Escape substitution is the following:
+The escape substitution is the following:
 | Original byte | Escape sequence |
 |:--------------|:----------------|
 | `0xAA`        | `0x7D` `0x8A`   |
@@ -39,11 +40,11 @@ Escape substitution is the following:
 
 ### CRC calculation
 
-> :warning: CRC is calculated on the **unescaped** data.
+> :warning: CRC is calculated on **unescaped** data.
 
 CRC is calculated on the entire unescaped message excluding the start byte (and the CRC itself, obviously).
 
-The CRC-16 algorithm is as following:
+The CRC-16 algorithm is the following:
 
 #### CRC-16 in C
 ```c
