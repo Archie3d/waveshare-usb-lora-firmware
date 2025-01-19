@@ -6,6 +6,7 @@ Run (to print the captured stdout):
 import time
 import waveshare
 
+# This must be changed to the right serial port used.
 api = waveshare.ApiClient('COM4')
 
 #-----------------------------------------------------------
