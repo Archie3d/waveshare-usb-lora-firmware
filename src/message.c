@@ -243,7 +243,7 @@ static void process_set_standby(const uint8_t* data, size_t size)
 {
     uint8_t* mode = (uint8_t*)data;
 
-    if (size > sizeof(uint8_t)) {
+    if (size == sizeof(uint8_t)) {
         radio_set_standby(*mode);
     }
 
@@ -330,4 +330,18 @@ void message_packet_transmitted(uint32_t time_on_air)
 void message_rssi(int16_t rssi)
 {
     serial_send_message(MSG_CONTINUOUS_RSSI, (const uint8_t*)&rssi, sizeof(rssi));
+}
+
+void message_logging(const char* str)
+{
+    // strlen does not work for some reason
+    size_t len = 0;
+    const char* p = str;
+    while (*p != '\0') {
+        len++;
+        p++;
+        if (len > 128)
+            break;
+    }
+    serial_send_message(MSG_LOGGING, (const uint8_t*)str, len);
 }

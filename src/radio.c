@@ -117,6 +117,11 @@ static uint8_t tx_buffer[255];
 static uint8_t tx_buffer_size;
 static bool transmitting = false;
 
+static void log_message(const char* str) {
+    if (handler != NULL && handler->logging != NULL)
+        handler->logging(str);
+}
+
 void exti0_isr(void) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
@@ -266,10 +271,10 @@ static void radio_isr_task(void* args __attribute__((unused)))
                 }
 
                 transmitting = false;
-
-                if (handler != NULL && handler->timeout != NULL)
-                    handler->timeout();
             }
+
+            if (handler != NULL && handler->timeout != NULL)
+                handler->timeout();
         }
 
         if (ulNotifiedValue & NOTIF_SET_LORA_PARAMS) {
@@ -552,7 +557,7 @@ uint8_t radio_get_standby()
 
 void radio_set_standby(uint8_t mode)
 {
-    if (mode == SX126X_STANDBY_CFG_RC || SX126X_STANDBY_CFG_XOSC)
+    if (mode == SX126X_STANDBY_CFG_RC || mode == SX126X_STANDBY_CFG_XOSC)
         standby_mode = mode;
 
     xTaskNotify(xRadioIsrTask, NOTIF_SET_STANDBY, eSetBits);

@@ -35,7 +35,8 @@ typedef enum {
     MSG_TIMEOUT            = 0x90,
     MSG_PACKET_RECEIVED    = 0x91,
     MSG_PACKET_TRANSMITTED = 0x92,
-    MSG_CONTINUOUS_RSSI    = 0x93
+    MSG_CONTINUOUS_RSSI    = 0x93,
+    MSG_LOGGING            = 0x9F
 
 } message_type_t;
 
@@ -49,5 +50,6 @@ void message_timeout();
 void message_packet_received(int8_t rssi, int8_t snr, int8_t signal_rssi, const uint8_t* data, size_t size);
 void message_packet_transmitted(uint32_t time_on_air);
 void message_rssi(int16_t rssi);
+void message_logging(const char* str);
 
 #endif // MESSAGE_H__

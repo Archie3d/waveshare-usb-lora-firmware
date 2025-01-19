@@ -80,11 +80,17 @@ static void reported_rssi(int16_t rssi)
     message_rssi(rssi);
 }
 
+static void logging(const char* str)
+{
+    message_logging(str);
+}
+
 radio_handler_t radio_handler = {
     .timeout = tx_rx_timeout,
     .packet_received = lora_packet_received,
     .packet_transmitted = lora_packet_transmitted,
     .reported_rssi = reported_rssi,
+    .logging = logging
 };
 
 /**

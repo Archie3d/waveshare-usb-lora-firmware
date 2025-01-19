@@ -160,6 +160,7 @@ MSG_TIMEOUT            = 0x90
 MSG_PACKET_RECEIVED    = 0x91
 MSG_PACKET_TRANSMITTED = 0x92
 MSG_CONTINUOUS_RSSI    = 0x93
+MSG_LOGGING            = 0x9F
 
 # LoRa spreading factors
 LORA_SF5  = 0x05
@@ -189,6 +190,23 @@ LORA_CR_4_6 = 0x02
 LORA_CR_4_7 = 0x03
 LORA_CR_4_8 = 0x04
 
+POWER_RAMP_10 = 0x00
+POWER_RAMP_20 = 0x01
+POWER_RAMP_40 = 0x02
+POWER_RAMP_80 = 0x03
+POWER_RAMP_200 = 0x04
+POWER_RAMP_800 = 0x05
+POWER_RAMP_1700 = 0x06
+POWER_RAMP_3400 = 0x07
+
+FALLBACK_STANDBY_RC = 0x20
+FALLBACK_STANDBY_XOSC = 0x30
+FALLBACK_STANDBY_XOSC_RX = 0x31
+FALLBACK_FS = 0x40
+
+STANDBY_RC = 0x00
+STANDBY_XOSC = 0x01
+
 
 class ApiClient:
 
@@ -209,6 +227,17 @@ class ApiClient:
         self.lora_sync_word = 0x2B # For Meshtastic
         self.lora_crc_on = True
         self.lora_invert_iq = False
+        self.rx_boost = True
+        self.duty_cycle = 0x02
+        self.hp_max = 0x02
+        self.power = -14
+        self.ramp_time = POWER_RAMP_3400
+        self.frequency = 0
+        self.fallback_mode = FALLBACK_STANDBY_RC
+        self.standby_mode = STANDBY_RC
+        self.rx_timeout = 0
+        self.rx_report_rssi = False
+        self.tx_timeout = 0
 
 
     def wait_for_response(self, msg_type):
@@ -225,6 +254,9 @@ class ApiClient:
                 self.transmitting = False
             elif type == MSG_CONTINUOUS_RSSI:
                 self.rssi = int.from_bytes(resp, byteorder='little', signed=True)
+            elif type == MSG_LOGGING:
+                msg = resp.decode("ascii")
+                print(f"[LOG] {msg}")
 
         return resp
 
@@ -271,7 +303,7 @@ class ApiClient:
         assert len(payload) == 6
         self.serial.send_message(MSG_SET_LORA_PACKET, payload)
         resp = self.wait_for_response(MSG_LORA_PACKET)
-        assert(len(resp) == 6)
+        assert len(resp) == 6
         self.lora_preamble_length = int.from_bytes(resp[0:2], byteorder='little', signed=False)
         self.lora_implicit_header = (int(resp[2]) != 0)
         self.lora_sync_word = int(resp[3])
@@ -279,9 +311,92 @@ class ApiClient:
         self.lora_invert_iq = (int(resp[5]) != 0)
 
 
-if __name__ == "__main__":
+    def set_rx_parameters(self, rx_boost):
+        payload = b''
+        payload += b'\x01' if rx_boost else b'\x00'
+        assert len(payload) == 1
+        self.serial.send_message(MSG_SET_RX_PARAMS, payload)
+        resp = self.wait_for_response(MSG_RX_PARAMS)
+        assert len(resp) == 1
+        self.rx_boost = (int(resp[0]) != 0)
 
-    api = ApiClient('COM4')
-    api.get_version()
-    print(f"Firmware version: {api.firmware_version}")
 
+    def set_tx_parameters(self,
+                          duty_cycle,
+                          hp_max,
+                          power,
+                          ramp_time):
+        payload = b''
+        payload += duty_cycle.to_bytes(1, 'little')
+        payload += hp_max.to_bytes(1, 'little')
+        payload += power.to_bytes(1, 'little', signed=True)
+        payload += ramp_time.to_bytes(1, 'little')
+        assert len(payload) == 4
+        self.serial.send_message(MSG_SET_TX_PARAMS, payload)
+        resp = self.wait_for_response(MSG_TX_PARAMS)
+        assert len(resp) == 4
+        self.duty_cycle = int(resp[0])
+        self.hp_max = int(resp[1])
+        self.power = int.from_bytes(resp[2:3], byteorder='little', signed=True)
+        self.ramp_time = int(resp[3])
+
+
+    def set_frequency(self, frequency):
+        payload = frequency.to_bytes(4, 'little', signed=False)
+        assert len(payload) == 4
+        self.serial.send_message(MSG_SET_FREQUENCY, payload)
+        resp = self.wait_for_response(MSG_FREQUENCY)
+        assert len(resp) == 4
+        self.frequency = int.from_bytes(resp, byteorder='little', signed=False)
+
+
+    def set_fallback_mode(self, fb_mode):
+        payload = fb_mode.to_bytes(1, 'little')
+        assert len(payload) == 1
+        self.serial.send_message(MSG_SET_FALLBACK_MODE, payload)
+        resp = self.wait_for_response(MSG_FALLBACK_MODE)
+        assert len(resp) == 1
+        self.fallback_mode = int(resp[0])
+
+
+    def get_rssi(self):
+        self.serial.send_message(MSG_GET_RSSI)
+        resp = self.wait_for_response(MSG_RSSI)
+        assert len(resp) == 2
+        self.rssi = int.from_bytes(resp, byteorder='little', signed=True)
+
+
+    def set_rx(self, timeout, report_rssi=False):
+        payload = b''
+        payload += timeout.to_bytes(4, 'little')
+        payload += b'\x01' if report_rssi else b'\x00'
+        assert len(payload) == 5
+        self.timeout = False
+        self.serial.send_message(MSG_SET_RX, payload)
+        resp = self.wait_for_response(MSG_RX)
+        assert len(resp) == 5
+        self.rx_timeout = int.from_bytes(resp[0:4], byteorder='little', signed=False)
+        self.rx_report_rssi = (resp[4] != 0x00)
+
+
+    def set_tx(self, timeout, data):
+        payload = timeout.to_bytes(4, 'little')
+        payload += data
+        assert len(payload) == 4 + len(data)
+        self.timeout = False
+        self.serial.send_message(MSG_SET_TX, payload)
+        resp = self.wait_for_response(MSG_TX)
+        assert len(resp) == 1
+
+        return int(resp[0]) == 0x00
+
+
+    def set_standby(self, mode):
+        assert mode == STANDBY_RC or mode == STANDBY_XOSC
+
+        payload = b'\x00' if mode == STANDBY_RC else b'\x01'
+        assert len(payload) == 1
+        self.serial.send_message(MSG_SET_STANDBY, payload)
+        resp = self.wait_for_response(MSG_STANDBY)
+        assert len(resp) == 1
+        self.standby_mode = STANDBY_RC if resp[0] == 0 else STANDBY_XOSC

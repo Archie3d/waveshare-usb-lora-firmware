@@ -173,9 +173,9 @@ The response includes the values as they've been set in the PX1262 chip.
 
 For Meshtastic messaging the parameters must be as following:
 
-| Preamble | Header type | Sync word | Payload length | CRC  | Invert IQ |
-|:---------|:------------|:----------|:---------------|:---- |:----------|
-| 16       | 0x00        | 0x2B      | 255            | 0x01 | 0x00      |
+| Preamble | Header type | Sync word | CRC  | Invert IQ |
+|:---------|:------------|:----------|:---- |:----------|
+| 16       | 0x00        | 0x2B      | 0x01 | 0x00      |
 
 ##### Response from device to host
 

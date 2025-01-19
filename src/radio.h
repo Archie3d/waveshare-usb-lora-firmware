@@ -18,6 +18,7 @@ typedef struct {
     void (*packet_received)(int8_t rssi, int8_t snr, int8_t signal_rssi, const uint8_t* payload, size_t payload_size);
     void (*packet_transmitted)(uint32_t time_on_air);
     void (*reported_rssi)(int16_t rssi);
+    void (*logging)(const char* str);
 } radio_handler_t;
 
 void radio_init(radio_handler_t* handler);
