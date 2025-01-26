@@ -203,7 +203,7 @@ static void radio_isr_task(void* args __attribute__((unused)))
             sx126x_get_rssi_inst(NULL, &continuous_rssi);
 
             // Report RSSI via callback
-            if (fallback_mode == SX126X_FALLBACK_STDBY_XOSC_RX &&
+            if ((rx_report_rssi != 0 || fallback_mode == SX126X_FALLBACK_STDBY_XOSC_RX) &&
                 handler != NULL &&
                 handler->reported_rssi != NULL)
             {
@@ -215,7 +215,7 @@ static void radio_isr_task(void* args __attribute__((unused)))
         if (xTaskNotifyWait(0,                // bits to clear on entry
                             0xFFFFFFFF,       // bits to clear on exit
                             &ulNotifiedValue, // Notified value pass out in
-                            pdMS_TO_TICKS(20)) == pdFALSE)
+                            pdMS_TO_TICKS(100)) == pdFALSE)
         {
             continue;
         }
