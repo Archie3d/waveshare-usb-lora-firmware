@@ -1,6 +1,9 @@
 # Waveshare usb-lora custom firmware
 Custom firmware to send and receive LoRa messages (particularly Meshtastic) using [Waveshare USB-to-LoRa module](https://github.com/Archie3d/waveshare-usb-lora).
 
+## Programming
+To flash the device with this firmware install [the bootloader](https://github.com/Archie3d/waveshare-usb-lora-bootloader) first. Then use [the CLI programmer](https://github.com/Archie3d/waveshare-usb-lora-programmer) to write the firmware.
+
 ## Communication interface
 Once programmed, the module can be accessed via serial interface via the API described below.
 The serial port must be configured as following:
