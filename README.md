@@ -152,14 +152,14 @@ SX126X_LORA_CR_4_8 = 0x04
 ##### Response from device to host
 The response includes the values as they've been set in the PX1262 chip.
 
-| Field            | Size | Value |
-|:-----------------|:-----|:------|
-| CMD              | 1    | 0x02  |
-| SIZE             | 2    | 3     |
-| Spreading factor | 1    |       |
-| Bandwidth        | 1    |       |
-| Coding rate      | 1    |       |
-
+| Field            | Size | Value            |
+|:-----------------|:-----|:-----------------|
+| CMD              | 1    | 0x02             |
+| SIZE             | 2    | 4                |
+| Spreading factor | 1    |                  |
+| Bandwidth        | 1    |                  |
+| Coding rate      | 1    |                  |
+| Low data rate    | 1    | `0x01` or `0x00` |
 ----
 #### :envelope: Set LoRa packet paremeters
 
@@ -258,34 +258,33 @@ The output power is defined as power in dBm in a range of
 
 ##### Response from device to host
 
-| Field               | Size | Value            |
-|:--------------------|:-----|:-----------------|
-| CMD                 | 1    | 0x85             |
-| SIZE                | 1    | 4                |
-| paDutyCycle         | 1    |                  |
-| hpMax               | 1    |                  |
-| power               | 1    |                  |
-| ramp time           | 1    |                  |
-| Switch to RX        | 1    | `0x00` or `0x01` |
+| Field               | Size | Value |
+|:--------------------|:-----|:------|
+| CMD                 | 1    | 0x85  |
+| SIZE                | 1    | 4     |
+| paDutyCycle         | 1    |       |
+| hpMax               | 1    |       |
+| power               | 1    |       |
+| ramp time           | 1    |       |
 
 ----
 #### :envelope: Set radio frequency
 
 ##### Request from host to device
 
-| Field      | Size | Value                        |
-|:-----------|:-----|:-----------------------------|
-| CMD        | 1    | 0x06                         |
-| SIZE       | 1    | 4                            |
-| Frequency  | 4    | Frequency in Mhz as `uint32` |
+| Field      | Size | Value                       |
+|:-----------|:-----|:----------------------------|
+| CMD        | 1    | 0x06                        |
+| SIZE       | 1    | 4                           |
+| Frequency  | 4    | Frequency in Hz as `uint32` |
 
 ##### Response from device to host
 
-| Field      | Size | Value                        |
-|:-----------|:-----|:-----------------------------|
-| CMD        | 1    | 0x86                         |
-| SIZE       | 1    | 4                            |
-| Frequency  | 4    | Frequency in Mhz as `uint32` |
+| Field      | Size | Value                       |
+|:-----------|:-----|:----------------------------|
+| CMD        | 1    | 0x86                        |
+| SIZE       | 1    | 4                           |
+| Frequency  | 4    | Frequency in Hz as `uint32` |
 
 ----
 #### :envelope: Set RX/TX fallback mode
@@ -370,12 +369,12 @@ When the device is in RX mode, it will send unsolicited messages to the host on 
 Put device in TX mode and send the data.
 
 ##### Request from host to device
-| Field        | Size          | Value                                    |
-|:-------------|:--------------|:-----------------------------------------|
-| CMD          | 1             | 0x0A                                     |
-| SIZE         | data size + 4 | Data size + 1                            |
-| Timeout      | 4             | Timeout in ms as `uint32`                |
-| Data         | SIZE - 4      | Data to be transmitted                   |
+| Field        | Size     | Value                     |
+|:-------------|:---------|:--------------------------|
+| CMD          | 1        | 0x0A                      |
+| SIZE         | 1        | Data size + 4             |
+| Timeout      | 4        | Timeout in ms as `uint32` |
+| Data         | SIZE - 4 | Data to be transmitted    |
 
 Using `0` value for the timeout will disable the timeout.
 
