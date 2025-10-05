@@ -114,7 +114,7 @@ static radio_handler_t* handler = NULL;
 static TaskHandle_t xRadioIsrTask;
 
 static uint8_t tx_buffer[255];
-static uint8_t tx_buffer_size;
+static uint8_t tx_buffer_size = 0;
 static bool transmitting = false;
 
 static void log_message(const char* str) {
@@ -304,6 +304,9 @@ static void radio_isr_task(void* args __attribute__((unused)))
         }
 
         if (ulNotifiedValue & NOTIF_SET_RX) {
+	    lora_pkt_params.pld_len_in_bytes = 255;
+            sx126x_set_lora_pkt_params(NULL, &lora_pkt_params);
+
             if (rx_timeout >= SX126X_RX_CONTINUOUS) {
                 sx126x_set_rx_with_timeout_in_rtc_step(NULL, SX126X_RX_CONTINUOUS);
             } else {
@@ -315,6 +318,9 @@ static void radio_isr_task(void* args __attribute__((unused)))
 
         if (ulNotifiedValue & NOTIF_SET_TX) {
             sx126x_write_buffer(NULL, 0, tx_buffer, tx_buffer_size);
+
+	    lora_pkt_params.pld_len_in_bytes = tx_buffer_size;
+            sx126x_set_lora_pkt_params(NULL, &lora_pkt_params);
 
             set_antenna_to_tx();
             sx126x_set_tx(NULL, tx_timeout);
@@ -546,7 +552,11 @@ void radio_set_tx(uint32_t timeout, const uint8_t* payload, size_t payload_size)
     transmitting = true;
     tx_timeout = timeout;
 
-    memcpy(tx_buffer, payload, payload_size);
+    tx_buffer_size = payload_size;
+    if (tx_buffer_size > 255)
+        tx_buffer_size = 255;
+
+    memcpy(tx_buffer, payload, tx_buffer_size);
     xTaskNotify(xRadioIsrTask, NOTIF_SET_TX, eSetBits);
 }
 
