@@ -77,12 +77,6 @@ static sx126x_cmd_status_t chip_status(const char* prefix) {
     sx126x_chip_status_t chip_status;
     sx126x_get_status(NULL, &chip_status);
 
-    DBG(prefix);
-    DBG("\tChip mode: ");
-    DBG_I(chip_status.chip_mode);
-    DBG(" Command status: ");
-    DBG_I(chip_status.cmd_status);
-    DBG("\n");
     return chip_status.cmd_status;
 }
 
@@ -203,7 +197,7 @@ static void radio_isr_task(void* args __attribute__((unused)))
             sx126x_get_rssi_inst(NULL, &continuous_rssi);
 
             // Report RSSI via callback
-            if ((rx_report_rssi != 0 || fallback_mode == SX126X_FALLBACK_STDBY_XOSC_RX) &&
+            if (rx_report_rssi != 0 &&
                 handler != NULL &&
                 handler->reported_rssi != NULL)
             {
