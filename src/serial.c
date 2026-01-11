@@ -256,14 +256,14 @@ void serial_send_message2(uint8_t type, const uint8_t* chunk1, size_t chunk1_siz
     serial_putc_escaped(data);
     crc = crc16(crc, &data, 1);
 
-    if (chunk1 != NULL & chunk1_size > 0) {
+    if ((chunk1 != NULL) && (chunk1_size > 0)) {
         for (size_t i = 0; i < chunk1_size; i++)
             serial_putc_escaped(chunk1[i]);
 
         crc = crc16(crc, chunk1, chunk1_size);
     }
 
-    if (chunk2 != NULL & chunk2_size > 0) {
+    if ((chunk2 != NULL) && (chunk2_size > 0)) {
         for (size_t i = 0; i < chunk2_size; i++)
             serial_putc_escaped(chunk2[i]);
 
