@@ -9,9 +9,10 @@ OBJDUMP		:= $(PREFIX)-objdump
 MKDIR_P		:= mkdir -p
 
 ARCH_FLAGS = -mthumb -mcpu=cortex-m3 -msoft-float -mfix-cortex-m3-ldrd
-CFLAGS = -I. -Isrc -Isx126x -Irtos -Ilibopencm3/include -nostdlib $(ARCH_FLAGS) -Os -DSTM32F1
+CFLAGS = -Wall -I. -Isrc -Isx126x -Irtos -Ilibopencm3/include -nostdlib $(ARCH_FLAGS) -Os -DSTM32F1
 CFLAGS += -fno-common -ffunction-sections -fdata-sections
 
+LD_OPTS   = -Xlinker --gc-sections -Xlinker --print-memory-usage -Wl,-Map,"$(PROJECT).map" --specs=nano.specs --specs=nosys.specs
 
 LDSCRIPT = gd32f103.ld
 
@@ -48,7 +49,7 @@ $(BINARY): $(FIRMWARE)
 
 $(FIRMWARE): $(OUT_DIR) libopencm3 $(LIBFREERTOS) $(LIBSX126X) $(OBJS)
 	@echo [CC]	$@
-	$(Q)$(CC) -o $@ $(OBJS) -T gd32f103.ld -L. -Llibopencm3/lib --specs=nosys.specs -nostartfiles -lc -lgcc -lnosys -lsx126x -lfreertos -lopencm3_stm32f1
+	$(Q)$(CC) -o $@ $(OBJS) -T gd32f103.ld -L. -Llibopencm3/lib --specs=nosys.specs -nostartfiles -Xlinker --gc-sections -Xlinker --print-memory-usage -Wl,-Map,"$(PROJECT).map" -lnosys -lsx126x -lfreertos -lopencm3_stm32f1
 
 libopencm3: libopencm3/lib/libopencm3_stm32f1.a
 
