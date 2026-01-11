@@ -73,7 +73,7 @@ static void serial_rx_task(void* args __attribute__((unused)))
     rx_state_t state = RX_STATE_START;
 
     bool escape_sequence_detected = false;
-    uint16_t payload_bytes_received;
+    uint16_t payload_bytes_received = 0;
     uint8_t ch;
 
     long start_time = xTaskGetTickCount();

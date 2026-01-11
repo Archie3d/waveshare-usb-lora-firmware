@@ -12,8 +12,6 @@ ARCH_FLAGS = -mthumb -mcpu=cortex-m3 -msoft-float -mfix-cortex-m3-ldrd
 CFLAGS = -Wall -I. -Isrc -Isx126x -Irtos -Ilibopencm3/include -nostdlib $(ARCH_FLAGS) -Os -DSTM32F1
 CFLAGS += -fno-common -ffunction-sections -fdata-sections
 
-LD_OPTS   = -Xlinker --gc-sections -Xlinker --print-memory-usage -Wl,-Map,"$(PROJECT).map" --specs=nano.specs --specs=nosys.specs
-
 LDSCRIPT = gd32f103.ld
 
 
@@ -35,6 +33,7 @@ SX126X_OBJS := $(patsubst %.o, obj/%.o, $(SX126X_OBJS))
 
 FIRMWARE = fimrware.elf
 BINARY = firmware.bin
+MEMORYMAP = firmware.map
 
 OBJS = main.o init.o radio.o serial.o message.o crc16.o
 OBJS := $(patsubst %.o, obj/%.o, $(OBJS))
@@ -49,7 +48,7 @@ $(BINARY): $(FIRMWARE)
 
 $(FIRMWARE): $(OUT_DIR) libopencm3 $(LIBFREERTOS) $(LIBSX126X) $(OBJS)
 	@echo [CC]	$@
-	$(Q)$(CC) -o $@ $(OBJS) -T gd32f103.ld -L. -Llibopencm3/lib --specs=nosys.specs -nostartfiles -Xlinker --gc-sections -Xlinker --print-memory-usage -Wl,-Map,"$(PROJECT).map" -lnosys -lsx126x -lfreertos -lopencm3_stm32f1
+	$(Q)$(CC) -o $@ $(OBJS) -T gd32f103.ld -L. -Llibopencm3/lib --specs=nosys.specs -nostartfiles -Xlinker --gc-sections -Xlinker --print-memory-usage -Wl,-Map,"$(MEMORYMAP)" -lnosys -lsx126x -lfreertos -lopencm3_stm32f1
 
 libopencm3: libopencm3/lib/libopencm3_stm32f1.a
 
@@ -77,6 +76,8 @@ clean:
 	$(Q)rm -f $(BINARY)
 	@echo [RM] $(FIRMWARE)
 	$(Q)rm -f $(FIRMWARE)
+	@echo [RM] $(MEMORYMAP)
+	$(Q)rm -f $(MEMORYMAP)
 	@echo [RM] $(LIBSX126X)
 	$(Q)rm -f $(LIBSX126X)
 	@echo [RM] $(LIBFREERTOS)

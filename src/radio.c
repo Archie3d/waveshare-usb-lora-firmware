@@ -73,13 +73,6 @@ static uint32_t tx_timeout = 0;
 
 static sx126x_standby_cfg_t standby_mode = SX126X_STANDBY_CFG_RC;
 
-static sx126x_cmd_status_t chip_status(const char* prefix) {
-    sx126x_chip_status_t chip_status;
-    sx126x_get_status(NULL, &chip_status);
-
-    return chip_status.cmd_status;
-}
-
 static void set_antenna_to_rx()
 {
     gpio_set(LORA_RF_SW_PORT, LORA_RF_SW_PIN);
@@ -110,11 +103,6 @@ static TaskHandle_t xRadioIsrTask;
 static uint8_t tx_buffer[255];
 static uint8_t tx_buffer_size = 0;
 static bool transmitting = false;
-
-static void log_message(const char* str) {
-    if (handler != NULL && handler->logging != NULL)
-        handler->logging(str);
-}
 
 void exti0_isr(void) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;

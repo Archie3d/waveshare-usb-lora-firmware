@@ -7,3 +7,5 @@ obj/
 *.elf
 *.bin
 *.dis
+*.map
+
