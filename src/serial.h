@@ -27,9 +27,13 @@ void serial_putc(const uint8_t ch);
 void serial_putc_escaped(const uint8_t ch);
 void serial_send(const uint8_t* data, size_t size);
 
+#ifdef DEBUG
+
 void debug_puts(const char* str);
 void debug_putc(char ch);
 void debug_puti(int i);
 void debug_putx(uint32_t x);
+
+#endif // DEBUG
 
 #endif // SERIAL_H__

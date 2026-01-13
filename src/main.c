@@ -42,12 +42,6 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char* pcTaskName)
 }
 
 void vAssertCalled(const char *file, int line) {
-    DBG("Assert failed in file ");
-    DBG(file);
-    DBG(", line ");
-    DBG_I(line);
-    DBG("\n");
-
     error_blink();
 }
 

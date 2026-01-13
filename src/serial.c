@@ -127,8 +127,6 @@ static void serial_rx_task(void* args __attribute__((unused)))
                 /* Waiting for the message type */
                 msg_type = ch;
                 state = RX_STATE_LENGTH_LSB;
-                DBG_I(msg_type);
-                DBG("\n");
                 break;
             case RX_STATE_LENGTH_LSB:
                 msg_payload_length = (uint16_t)ch;
@@ -303,6 +301,7 @@ void serial_send(const uint8_t* data, size_t size)
     }
 }
 
+#ifdef DEBUG
 
 void debug_puts(const char *str) {
     while (*str) {
@@ -347,3 +346,5 @@ void debug_putx(uint32_t x) {
         usart_send_blocking(USART1, hexChars[nibble]);
     }
 }
+
+#endif // DEBUG

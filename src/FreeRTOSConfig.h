@@ -133,6 +133,8 @@ extern void vAssertCalled(const char *file, int line);
 
 #define configASSERT(x) if ((x) == 0) vAssertCalled(__FILE__, __LINE__)
 
+#ifdef DEBUG
+
 extern void debug_puts(const char* str);
 extern void debug_putc(char ch);
 extern void debug_puti(int i);
@@ -142,6 +144,8 @@ extern void debug_putx(uint32_t x);
 #define DBG_C(c) debug_putc(c);
 #define DBG_I(x) debug_puti(x);
 #define DBG_X(x) debug_putx(x);
+
+#endif // DEBUG
 
 extern void *dbg_memcpy(void *dest, const void *src, size_t n);
 #define memcpy dbg_memcpy
