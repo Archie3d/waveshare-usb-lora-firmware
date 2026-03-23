@@ -285,6 +285,16 @@ static void radio_isr_task(void* args __attribute__((unused)))
             sx126x_set_rx_tx_fallback_mode(NULL, fallback_mode & 0xF0);
         }
 
+        if (ulNotifiedValue & NOTIF_SET_TX) {
+            sx126x_write_buffer(NULL, 0, tx_buffer, tx_buffer_size);
+
+            lora_pkt_params.pld_len_in_bytes = tx_buffer_size;
+            sx126x_set_lora_pkt_params(NULL, &lora_pkt_params);
+
+            set_antenna_to_tx();
+            sx126x_set_tx(NULL, tx_timeout);
+        }
+
         if (ulNotifiedValue & NOTIF_SET_RX) {
             lora_pkt_params.pld_len_in_bytes = 255;
             sx126x_set_lora_pkt_params(NULL, &lora_pkt_params);
@@ -297,16 +307,6 @@ static void radio_isr_task(void* args __attribute__((unused)))
 
             set_antenna_to_rx();
             transmitting = false;
-        }
-
-        if (ulNotifiedValue & NOTIF_SET_TX) {
-            sx126x_write_buffer(NULL, 0, tx_buffer, tx_buffer_size);
-
-            lora_pkt_params.pld_len_in_bytes = tx_buffer_size;
-            sx126x_set_lora_pkt_params(NULL, &lora_pkt_params);
-
-            set_antenna_to_tx();
-            sx126x_set_tx(NULL, tx_timeout);
         }
 
         if (ulNotifiedValue & NOTIF_SET_STANDBY) {
