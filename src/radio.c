@@ -119,7 +119,7 @@ void exti0_isr(void) {
     }
 
     if ((irq_mask & SX126X_IRQ_TX_DONE) == SX126X_IRQ_TX_DONE) {
-        notif = NOTIF_IRQ_TX_DONE;
+        notif |= NOTIF_IRQ_TX_DONE;
     }
 
     if ((irq_mask & SX126X_IRQ_TIMEOUT) == SX126X_IRQ_TIMEOUT) {
@@ -286,7 +286,7 @@ static void radio_isr_task(void* args __attribute__((unused)))
         }
 
         if (ulNotifiedValue & NOTIF_SET_RX) {
-	    lora_pkt_params.pld_len_in_bytes = 255;
+            lora_pkt_params.pld_len_in_bytes = 255;
             sx126x_set_lora_pkt_params(NULL, &lora_pkt_params);
 
             if (rx_timeout >= SX126X_RX_CONTINUOUS) {
@@ -296,12 +296,13 @@ static void radio_isr_task(void* args __attribute__((unused)))
             }
 
             set_antenna_to_rx();
+            transmitting = false;
         }
 
         if (ulNotifiedValue & NOTIF_SET_TX) {
             sx126x_write_buffer(NULL, 0, tx_buffer, tx_buffer_size);
 
-	    lora_pkt_params.pld_len_in_bytes = tx_buffer_size;
+            lora_pkt_params.pld_len_in_bytes = tx_buffer_size;
             sx126x_set_lora_pkt_params(NULL, &lora_pkt_params);
 
             set_antenna_to_tx();
