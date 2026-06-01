@@ -15,6 +15,10 @@ void global_init(serial_handler_t* serial_handler, radio_handler_t* radio_handle
 {
     SCB_CCR &= ~SCB_CCR_UNALIGN_TRP; // Disable unaligned access traps
 
+    // Wait for crystal to stabilize
+    for (volatile int i = 0; i < 60000; i++) { __asm__("nop"); }
+    RCC_CR |= RCC_CR_HSEBYP;
+
     // Initialize system clock, XTAL 8MHz PLL to 72MHz
     rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
 
