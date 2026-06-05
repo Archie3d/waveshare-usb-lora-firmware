@@ -15,7 +15,12 @@ void global_init(serial_handler_t* serial_handler, radio_handler_t* radio_handle
 {
     SCB_CCR &= ~SCB_CCR_UNALIGN_TRP; // Disable unaligned access traps
 
-    // Wait for crystal to stabilize
+    // Power to TCXO
+    rcc_periph_clock_enable(RCC_GPIOD);
+    gpio_set_mode(GPIOD, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO1);
+    gpio_set(GPIOD, GPIO1);
+
+    // Wait for OSC to stabilize
     for (volatile int i = 0; i < 60000; i++) { __asm__("nop"); }
     RCC_CR |= RCC_CR_HSEBYP;
 
