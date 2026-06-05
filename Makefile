@@ -12,6 +12,9 @@ ARCH_FLAGS = -mthumb -mcpu=cortex-m3 -msoft-float -mfix-cortex-m3-ldrd
 CFLAGS = -Wall -I. -Isrc -Isx126x -Irtos -Ilibopencm3/include -nostdlib $(ARCH_FLAGS) -Os -DSTM32F1
 CFLAGS += -fno-common -ffunction-sections -fdata-sections
 
+# For XTAL version (Waveshare USB-LoRa-xF-B) set WITH_TCXO=0
+CFLAGS += -DWITH_TCXO=1
+
 LDSCRIPT = gd32f103.ld
 
 

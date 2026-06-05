@@ -4,6 +4,11 @@ Custom firmware to send and receive LoRa messages (particularly Meshtastic) usin
 > This firmware alone only provides access to the LoRa chip over the USB serial interface.
 > See the [Meshtastic node implementation](https://github.com/Archie3d/waveshare-usb-lora-node) for running a Meshtastic node with Waveshare USB-to-LoRa module.
 
+## TCXO vs XTAL
+There are two variants of Waveshare mosules `USB-LoRa-xF` and `USB-LoRa-xF-B` (where `xF` can be `LF` for 410-510Mhz or `HF` for 850-930MHz). Devices with `-B` suffix use XTAL crystal oscillator, while those without `-B` use TCXO.
+
+By default the firmwire is compiled for TCXO variant. To compile for XTAL modify the Makefile and set `WITH_TCXO=0`.
+
 ## Programming
 To flash the device with this firmware install [the bootloader](https://github.com/Archie3d/waveshare-usb-lora-bootloader) first. Then use [the CLI programmer](https://github.com/Archie3d/waveshare-usb-lora-programmer) to write the firmware.
 

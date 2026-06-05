@@ -12,7 +12,9 @@
 #include "libopencm3/cm3/scb.h"
 
 // Set this to 0 for XTAL version of the board.
+#ifndef WITH_TCXO
 #define WITH_TCXO 1
+#endif
 
 void global_init(serial_handler_t* serial_handler, radio_handler_t* radio_handler)
 {
