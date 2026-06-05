@@ -47,8 +47,10 @@ void global_init(serial_handler_t* serial_handler, radio_handler_t* radio_handle
     AFIO_MAPR &= ~AFIO_MAPR_SWJ_MASK;               // Clear SWJ_CFG bits
     AFIO_MAPR |= AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_ON;  // Disable JTAG but keep SWD on
 
-    gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, LORA_DIO1_PIN | LORA_BUSY_PIN);
-    gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LORA_RF_SW_PIN);
+    gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, LORA_DIO1_PIN);
+    // Pull the SX126x BUSY pin down to avoid spurious busy state.
+    gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, LORA_BUSY_PIN);
+    gpio_clear(GPIOB, LORA_BUSY_PIN);
 
     // Initialize USART
     serial_init(serial_handler);
