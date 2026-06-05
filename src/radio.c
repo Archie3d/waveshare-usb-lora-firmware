@@ -13,9 +13,10 @@
 
 typedef enum {
     // IRQ notifications
-    NOTIF_IRQ_RX_DONE = 0x0001,
-    NOTIF_IRQ_TX_DONE = 0x0002,
-    NOTIF_IRQ_TIMEOUT = 0x0004,
+    NOTIF_IRQ_RADIO = 0x0001,
+    NOTIF_RX_DONE   = 0x0002,
+    NOTIF_TX_DONE   = 0x0004,
+    NOTIF_TIMEOUT   = 0x0008,
 
     // Requests processing notifications
     NOTIF_SET_LORA_PARAMS = 0x000100,
@@ -106,30 +107,8 @@ static bool transmitting = false;
 
 void exti0_isr(void) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
     exti_reset_request(EXTI0);
-
-    sx126x_irq_mask_t irq_mask;
-    sx126x_get_and_clear_irq_status(NULL, &irq_mask);
-
-    uint32_t notif = 0;
-
-    if ((irq_mask & SX126X_IRQ_RX_DONE) == SX126X_IRQ_RX_DONE) {
-        notif |= NOTIF_IRQ_RX_DONE;
-    }
-
-    if ((irq_mask & SX126X_IRQ_TX_DONE) == SX126X_IRQ_TX_DONE) {
-        notif |= NOTIF_IRQ_TX_DONE;
-    }
-
-    if ((irq_mask & SX126X_IRQ_TIMEOUT) == SX126X_IRQ_TIMEOUT) {
-        notif |= NOTIF_IRQ_TIMEOUT;
-    }
-
-    if (notif) {
-        xTaskNotifyFromISR(xRadioIsrTask, notif, eSetBits, &xHigherPriorityTaskWoken);
-    }
-
+    xTaskNotifyFromISR(xRadioIsrTask, NOTIF_IRQ_RADIO, eSetBits, &xHigherPriorityTaskWoken);
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
@@ -138,7 +117,7 @@ static void radio_isr_task(void* args __attribute__((unused)))
     static uint8_t rx_buffer[255];
     uint8_t rx_buffer_size = 0;
 
-    uint32_t ulNotifiedValue;
+    uint32_t ulNotifiedValue = 0;
 
     sx126x_reset(NULL);
     sx126x_set_reg_mode(NULL, SX126X_REG_MODE_LDO);
@@ -202,7 +181,25 @@ static void radio_isr_task(void* args __attribute__((unused)))
             continue;
         }
 
-        if (ulNotifiedValue & NOTIF_IRQ_RX_DONE) {
+        if (ulNotifiedValue & NOTIF_IRQ_RADIO) {
+            sx126x_irq_mask_t irq_mask;
+            sx126x_get_and_clear_irq_status(NULL, &irq_mask);
+
+            if ((irq_mask & SX126X_IRQ_RX_DONE) == SX126X_IRQ_RX_DONE) {
+                ulNotifiedValue |= NOTIF_RX_DONE;
+            }
+
+            if ((irq_mask & SX126X_IRQ_TX_DONE) == SX126X_IRQ_TX_DONE) {
+                ulNotifiedValue |= NOTIF_TX_DONE;
+            }
+
+            if ((irq_mask & SX126X_IRQ_TIMEOUT) == SX126X_IRQ_TIMEOUT) {
+                ulNotifiedValue |= NOTIF_TIMEOUT;
+            }
+        }
+
+
+        if (ulNotifiedValue & NOTIF_RX_DONE) {
             sx126x_rx_buffer_status_t rx_buffer_status;
             sx126x_pkt_status_lora_t pkt_status;
 
@@ -226,7 +223,7 @@ static void radio_isr_task(void* args __attribute__((unused)))
 
         }
 
-        if (ulNotifiedValue & NOTIF_IRQ_TX_DONE) {
+        if (ulNotifiedValue & NOTIF_TX_DONE) {
             transmitting = false;
 
             // Switch antenna back to RX
@@ -243,7 +240,7 @@ static void radio_isr_task(void* args __attribute__((unused)))
             }
         }
 
-        if (ulNotifiedValue & NOTIF_IRQ_TIMEOUT) {
+        if (ulNotifiedValue & NOTIF_TIMEOUT) {
             if (transmitting) {
                 set_antenna_to_rx();
 
