@@ -120,6 +120,7 @@ static void radio_isr_task(void* args __attribute__((unused)))
     uint32_t ulNotifiedValue = 0;
 
     sx126x_reset(NULL);
+    sx126x_cfg_tx_clamp(NULL);
     sx126x_set_reg_mode(NULL, SX126X_REG_MODE_LDO);
     sx126x_set_dio2_as_rf_sw_ctrl(NULL, false);
     sx126x_set_standby(NULL, SX126X_STANDBY_CFG_RC);
